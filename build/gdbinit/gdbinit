@@ -1,0 +1,2 @@
+source D:/dev/ESP-IDF/esp-iot-solution/examples/usb/host/usb_camera_mic_spk/build/gdbinit/symbols
+source D:/dev/ESP-IDF/esp-iot-solution/examples/usb/host/usb_camera_mic_spk/build/gdbinit/connect

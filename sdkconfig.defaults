@@ -1,0 +1,27 @@
+# This file was generated using idf.py save-defconfig. It can be edited manually.
+# Espressif IoT Development Framework (ESP-IDF) Project Minimal Configuration
+# For IDF 5.0
+CONFIG_ESP_DEFAULT_CPU_FREQ_MHZ_240=y
+CONFIG_ESP_CONSOLE_UART_CUSTOM=y
+CONFIG_ESP_CONSOLE_UART_BAUDRATE=2000000
+CONFIG_FREERTOS_HZ=1000
+CONFIG_LOG_DEFAULT_LEVEL_VERBOSE=y
+
+# Use larger partition for ESP32-P4 (binary > 1MB with esp_hosted)
+CONFIG_PARTITION_TABLE_SINGLE_APP_LARGE=y
+
+# Enable PSRAM (32MB on Waveshare ESP32-P4-WiFi6)
+CONFIG_SPIRAM=y
+CONFIG_SPIRAM_SPEED_200M=y
+CONFIG_SPIRAM_BOOT_INIT=y
+CONFIG_SPIRAM_USE_MALLOC=y
+
+# ESP-Hosted WiFi via ESP32-C6 co-processor (Waveshare ESP32-P4-WiFi6 board)
+# NOTE: ESP_HOST_WIFI_ENABLED must NOT be set - it disables esp_wifi_remote!
+CONFIG_SLAVE_IDF_TARGET_ESP32C6=y
+# SDIO is auto-selected as default transport for P4+C6 by esp_hosted
+
+# For IDF4.4
+CONFIG_ESP32S2_DEFAULT_CPU_FREQ_240=y
+CONFIG_ESP32S3_DEFAULT_CPU_FREQ_240=y
+CONFIG_ESPTOOLPY_MONITOR_BAUD_CONSOLE=y

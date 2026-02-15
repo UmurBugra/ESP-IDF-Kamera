@@ -1,0 +1,13 @@
+# Target labels
+ bootloader
+# Source files and their labels
+D:/dev/ESP-IDF/esp-iot-solution/examples/usb/host/usb_camera_mic_spk/build/CMakeFiles/bootloader
+D:/dev/ESP-IDF/esp-iot-solution/examples/usb/host/usb_camera_mic_spk/build/CMakeFiles/bootloader.rule
+D:/dev/ESP-IDF/esp-iot-solution/examples/usb/host/usb_camera_mic_spk/build/CMakeFiles/bootloader-complete.rule
+D:/dev/ESP-IDF/esp-iot-solution/examples/usb/host/usb_camera_mic_spk/build/bootloader-prefix/src/bootloader-stamp/bootloader-build.rule
+D:/dev/ESP-IDF/esp-iot-solution/examples/usb/host/usb_camera_mic_spk/build/bootloader-prefix/src/bootloader-stamp/bootloader-configure.rule
+D:/dev/ESP-IDF/esp-iot-solution/examples/usb/host/usb_camera_mic_spk/build/bootloader-prefix/src/bootloader-stamp/bootloader-download.rule
+D:/dev/ESP-IDF/esp-iot-solution/examples/usb/host/usb_camera_mic_spk/build/bootloader-prefix/src/bootloader-stamp/bootloader-install.rule
+D:/dev/ESP-IDF/esp-iot-solution/examples/usb/host/usb_camera_mic_spk/build/bootloader-prefix/src/bootloader-stamp/bootloader-mkdir.rule
+D:/dev/ESP-IDF/esp-iot-solution/examples/usb/host/usb_camera_mic_spk/build/bootloader-prefix/src/bootloader-stamp/bootloader-patch.rule
+D:/dev/ESP-IDF/esp-iot-solution/examples/usb/host/usb_camera_mic_spk/build/bootloader-prefix/src/bootloader-stamp/bootloader-update.rule
