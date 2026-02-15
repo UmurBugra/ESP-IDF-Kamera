@@ -1,161 +1,120 @@
-## USB Stream Example
+## USB Kamera Yayını (ESP32-P4 + Waveshare ESP32-P4-WiFi6)
 
-This example demonstrates how to use `usb_stream` component with an ESP device. Example does the following steps:
+Bu proje, USB UVC kameradan alınan görüntüyü ESP32-P4 üzerinden Wi-Fi hotspot ile tarayıcıya aktarır. Orijinal örnek ESP32-S2/S3 için yazılmıştı; **Waveshare ESP32-P4-WiFi6** kartına uyarlanmıştır.
 
-1. Config a UVC function with specified frame resolution and frame rate, register frame callback
-2. Config a UAC function with one microphone and one speaker stream, register mic frame callback
-3. Start the USB streaming
-4. In image frame callback, if `ENABLE_UVC_WIFI_XFER` is set to `1`, the real-time image can be fetched through ESP32Sx's Wi-Fi softAP (ssid: ESP32S3-UVC, http: 192.168.4.1), else will just print the image message
-5. In mic callback, if `ENABLE_UAC_MIC_SPK_LOOPBACK` is set to `1`, the mic data will be write back to usb speaker, else will just print mic data message
-6. For speaker, if `ENABLE_UAC_MIC_SPK_LOOPBACK` is set to `0`, the default sound will be played back
+### Ne Yapıyor?
 
-## Hardware
+1. ESP32-C6 üzerinden Wi-Fi Access Point başlatır (esp_hosted, SDIO bağlantısı)
+2. USB kameradan YUYV (ham) görüntü alır (320×240, 10 FPS)
+3. Her kareyi yazılımsal olarak YUYV → BGR888'e çevirir (BT.601 renk formülleri)
+4. BGR888'i ESP32-P4'ün **donanımsal JPEG encoder'ı** ile sıkıştırır
+5. Sıkıştırılmış JPEG'i Wi-Fi üzerinden HTTP ile yayınlar
+6. Tarayıcıdan `http://192.168.4.1` adresine bağlanarak canlı görüntü izlenir
 
-* Development board
-
-  1. Any `ESP32-S2`,` ESP32-S3` board with USB Host port can be used.
-  2. Please note that the `esp32-sx-devkitC` board can not output 5V through USB port, If the OTG conversion cable is used directly, the device cannot be powered.
-  3. For `esp32s3-usb-otg` board, please enable the USB Host power domain to power the device
-
-* Connection
-
-    ||USB_DP|USB_DM|
-    |--|--|--|
-    |ESP32-S2/S3|GPIO20|GPIO19|
-
-* Camera module
-  * please refer the README of `usb_stream` for the Camera requirement
-
-
-## Build and Flash
-
-Build the project and flash it to the board, then run the monitor tool to view the serial output:
-
-* Run `. ./export.sh` to set IDF environment
-* Run `idf.py set-target esp32s3` to set target chip
-* Run `pip install "idf-component-manager~=1.1.4"` to upgrade your component manager if any error happens during last step
-* Run `idf.py -p PORT flash monitor` to build, flash and monitor the project
-
-(To exit the serial monitor, type `Ctrl-]`.)
-
-See the Getting Started Guide for all the steps to configure and use the ESP-IDF to build projects.
-
-## Example Output
+### Veri Akışı
 
 ```
-I (439) UVC_STREAM: line 486 HCD_PORT_EVENT_CONNECTION
-I (489) UVC_STREAM: Resetting Port
-I (549) UVC_STREAM: Setting Port FIFO
-I (549) UVC_STREAM: Getting Port Speed
-I (549) UVC_STREAM: Port speed = 1
-I (549) UVC_STREAM: USB Speed: full-speed
-I (550) UVC_STREAM: Set Device Addr = 1
-I (550) UVC_STREAM: Set Device Addr Done
-I (551) UVC_STREAM: get device desc
-I (551) UVC_STREAM: get device desc, actual_num_bytes:26
-*** Device descriptor ***
-bcdUSB 2.00
-bDeviceClass 0xef
-bDeviceSubClass 0x2
-bDeviceProtocol 0x1
-bMaxPacketSize0 64
-idVendor 0x1871
-idProduct 0xff50
-bNumConfigurations 1
-I (552) UVC_STREAM: get short config desc
-I (553) UVC_STREAM: get config desc, actual_num_bytes:16
-I (553) UVC_STREAM: get full config desc
-I (561) UVC_STREAM: get full config desc, actual_num_bytes:397
-*** Configuration descriptor ***
-wTotalLength 389
-bNumInterfaces 2
-bConfigurationValue 1
-*** Interface Association Descriptor: Video ***
-        *** Interface descriptor ***
-        bInterfaceNumber 0
-        bAlternateSetting 0
-        bNumEndpoints 1
-        bInterfaceClass 0xe (Video)
-        bInterfaceSubClass 0x1
-                *** Endpoint descriptor ***
-                bEndpointAddress 0x83   EP 3 IN
-                bmAttributes 0x3        INT
-                wMaxPacketSize 16
-                bInterval 6
-        *** Interface descriptor ***
-        bInterfaceNumber 1
-        bAlternateSetting 0
-        bNumEndpoints 0
-        bInterfaceClass 0xe (Video)
-        bInterfaceSubClass 0x2
-        *** Class-specific VS Interface Descriptor ***
-        bNumFormats 2
-        *** VS Format MJPEG Descriptor ***
-        bFormatIndex 0x2
-        bNumFrameDescriptors 4
-        bDefaultFrameIndex 1
-        *** VS MJPEG Frame Descriptor ***
-        bFrameIndex 0x1
-        wWidth 640
-        wHeigh 480
-        FrameInterval[0] 666666
-        *** VS MJPEG Frame Descriptor ***
-        bFrameIndex 0x2
-        wWidth 480
-        wHeigh 320
-        FrameInterval[0] 666666
-        FrameInterval[1] 1000000
-        FrameInterval[2] 2000000
-        *** VS MJPEG Frame Descriptor ***
-        bFrameIndex 0x3
-        wWidth 352
-        wHeigh 288
-        FrameInterval[0] 666666
-        *** VS MJPEG Frame Descriptor ***
-        bFrameIndex 0x4
-        wWidth 320
-        wHeigh 240
-        FrameInterval[0] 666666
-        *** Interface descriptor ***
-        bInterfaceNumber 1
-        bAlternateSetting 1
-        bNumEndpoints 1
-        bInterfaceClass 0xe (Video)
-        bInterfaceSubClass 0x2
-                *** Endpoint descriptor ***
-                bEndpointAddress 0x81   EP 1 IN
-                bmAttributes 0x5        ISOC
-                wMaxPacketSize 956
-                bInterval 1
-W (568) UVC_STREAM: VS Interface(MPS < 600) NOT found
-W (569) UVC_STREAM: Try with first alt-interface config
-I (569) UVC_STREAM: Actual MJPEG format index = 2, contains 4 frames
-I (569) UVC_STREAM: Actual MJPEG width*height: 320*240, frame index = 4
-I (570) UVC_STREAM: UVC Streaming Config Succeed
-W (570) UVC_STREAM: UAC 1.0 TYPE1 NOT found
-I (570) UVC_STREAM: Set Device Configuration = 1
-I (571) UVC_STREAM: Set Device Configuration Done
-I (571) UVC_STREAM: SET_CUR Probe
-I (575) UVC_STREAM: SET_CUR Probe Done
-I (575) UVC_STREAM: GET_CUR Probe
-I (576) UVC_STREAM: GET_CUR Probe Done, actual_num_bytes:34
-I (576) UVC_STREAM: SET_CUR COMMIT
-I (580) UVC_STREAM: SET_CUR COMMIT Done
-I (580) UVC_STREAM: Set Device Interface = 1, Alt = 1
-I (930) UVC_STREAM: Set Device Interface Done
-I (930) UVC_STREAM: usb stream task start
-I (930) UVC_STREAM: uvc stream urb ready
-I (931) UVC_STREAM: Sample processing task started
-I (931) UVC_STREAM: Creating uvc in(isoc) pipe itf = 1-1, ep = 0x81
-I (931) UVC_STREAM: uvc streaming...
-I (1492) uvc_mic_spk_demo: uvc callback! frame_format = 7, seq = 1, width = 320, height = 240, length = 8752, ptr = 0
-I (1557) uvc_mic_spk_demo: uvc callback! frame_format = 7, seq = 2, width = 320, height = 240, length = 9496, ptr = 0
-I (1624) uvc_mic_spk_demo: uvc callback! frame_format = 7, seq = 3, width = 320, height = 240, length = 7920, ptr = 0
-I (1688) uvc_mic_spk_demo: uvc callback! frame_format = 7, seq = 4, width = 320, height = 240, length = 7880, ptr = 0
-I (1752) uvc_mic_spk_demo: uvc callback! frame_format = 7, seq = 5, width = 320, height = 240, length = 8616, ptr = 0
-I (1820) uvc_mic_spk_demo: uvc callback! frame_format = 7, seq = 6, width = 320, height = 240, length = 8808, ptr = 0
-I (1885) uvc_mic_spk_demo: uvc callback! frame_format = 7, seq = 7, width = 320, height = 240, length = 8912, ptr = 0
-I (1952) uvc_mic_spk_demo: uvc callback! frame_format = 7, seq = 8, width = 320, height = 240, length = 8832, ptr = 0
-I (2017) uvc_mic_spk_demo: uvc callback! frame_format = 7, seq = 9, width = 320, height = 240, length = 8816, ptr = 0
+USB Kamera ──YUYV──→ ESP32-P4 CPU ──BGR888──→ HW JPEG Encoder ──JPEG──→ WiFi AP (C6) ──→ Tarayıcı
+             (ham)    (yazılım        (donanım                    (esp_hosted
+              veri)    dönüşüm)        sıkıştırma)                 SDIO)
+```
+
+## Donanım
+
+### Kart
+- **Waveshare ESP32-P4-WiFi6**
+- ESP32-P4: RISC-V çift çekirdek 360 MHz, 32 MB PSRAM
+- ESP32-C6-MINI-1: Wi-Fi 6 / BLE 5, SDIO 3.0 ile P4'e bağlı
+
+### Pin Bağlantıları (P4 ↔ C6 SDIO)
+
+| Sinyal | GPIO |
+|--------|------|
+| CLK    | 18   |
+| CMD    | 19   |
+| D0     | 14   |
+| D1     | 15   |
+| D2     | 16   |
+| D3     | 17   |
+| Slave Reset | 54 |
+
+### USB Kamera
+- Uncompressed (YUYV) format destekleyen herhangi bir USB UVC kamera
+- ESP32-P4 USB Host portuna bağlanır (USB DWC HS, UTMI PHY)
+- Test edilen kamera: VID 0x1E4E, PID 0x0110 (sadece YUYV, MJPEG desteği yok)
+
+## Gereksinimler
+
+- **ESP-IDF v5.5.2** veya üstü
+- **Hedef chip**: ESP32-P4
+
+## Derleme ve Yükleme
+
+```bash
+# ESP-IDF ortamını kur
+. ./export.sh
+
+# Hedef chip'i ayarla
+idf.py set-target esp32p4
+
+# Derle ve yükle
+idf.py -p PORT flash monitor
+```
+
+Seri monitörden çıkmak için `Ctrl-]` tuşlayın.
+
+## Ayarlar
+
+`sdkconfig.defaults` dosyasındaki önemli ayarlar:
 
 ```
+CONFIG_SPIRAM=y                          # 32MB PSRAM etkinleştir
+CONFIG_SPIRAM_SPEED_200M=y               # PSRAM 200MHz hızda
+CONFIG_SPIRAM_BOOT_INIT=y
+CONFIG_SPIRAM_USE_MALLOC=y
+CONFIG_SLAVE_IDF_TARGET_ESP32C6=y        # C6 WiFi yardımcı işlemci olarak
+CONFIG_PARTITION_TABLE_SINGLE_APP_LARGE=y # Büyük uygulama bölümü (~1MB binary)
+```
+
+> **Önemli**: `CONFIG_ESP_HOST_WIFI_ENABLED=y` ayarını **YAPMAYIN** — bu ayar `esp_wifi_remote` ve `esp_hosted` bileşenlerini devre dışı bırakır ve WiFi çalışmaz.
+
+`main.c` dosyasındaki önemli tanımlar:
+
+| Tanım | Değer | Açıklama |
+|--------|-------|-------------|
+| `ENABLE_UVC_CAMERA_FUNCTION` | 1 | USB kamerayı etkinleştir |
+| `ENABLE_UVC_WIFI_XFER` | 1 | Görüntüyü WiFi üzerinden aktar |
+| `ENABLE_UVC_FRAME_RESOLUTION_ANY` | 0 | Belirli çözünürlük kullan |
+| `DEMO_UVC_FRAME_WIDTH` | 320 | Kare genişliği |
+| `DEMO_UVC_FRAME_HEIGHT` | 240 | Kare yüksekliği |
+| FPS | 10 | Saniyedeki kare sayısı |
+
+## Bağımlılıklar (managed components)
+
+- `espressif/esp_hosted` (~2) — C6 için SDIO host sürücüsü
+- `espressif/esp_wifi_remote` (>=0.10, <2.0) — Uzak WiFi API'si
+- `usb_stream` (1.5.1) — USB UVC/UAC akış bileşeni
+
+## ESP32-P4 İçin Yapılan Değişiklikler
+
+ESP32-P4'te yerleşik Wi-Fi yok ve USB DWC HS (UTMI PHY) kullanıyor. Bu nedenle şu değişiklikler yapıldı:
+
+1. **USB PHY**: ESP32-P4'ün HS kontrolcüsü için `USB_PHY_TARGET_UTMI` olarak değiştirildi
+2. **Cache hizalama**: USB DMA tamponları için 64 byte cache-line hizalaması eklendi
+3. **UVC Uncompressed format**: `VS_FORMAT_UNCOMPRESSED` / `VS_FRAME_UNCOMPRESSED` tanımlayıcı ayrıştırma eklendi (orijinal kod sadece MJPEG destekliyordu)
+4. **YUYV → JPEG dönüşüm hattı**: Kamera MJPEG desteklemediği için yazılımsal YUYV→BGR888 renk dönüşümü + donanımsal JPEG sıkıştırma eklendi
+5. **WiFi (esp_hosted)**: `esp_wifi_remote` + `esp_hosted` ile C6 üzerinden SDIO aracılığıyla WiFi sağlandı
+6. **PSRAM**: Büyük frame tamponları için etkinleştirildi (~154KB YUYV × 3 tampon + RGB + JPEG)
+
+## Bilinen Kısıtlamalar
+
+- **Sadece YUYV**: Kamera MJPEG desteklemiyor; CPU yoğun renk dönüşümü gerekiyor
+- **Pratik maks çözünürlük 320×240**: 640×480 YUYV'de USB transfer taşması (buffer overflow) oluyor
+- **esp_hosted sürüm uyumsuzluğu**: `Host [2.11.0] > Co-proc [0.0.0]` uyarısı — C6 slave firmware güncellenebilir
+- **Ekran parçalanması**: Düşük ışıkta kamera zorlandığında ara sıra görüntü bozulması olabiliyor
+
+## WiFi Bağlantısı
+
+1. Telefondan veya bilgisayardan Wi-Fi ağına bağlanın: **ESP32S3-UVC** (şifresiz)
+2. Tarayıcıyı açın: `http://192.168.4.1`
+3. "Get Stream" butonuna basarak canlı yayını başlatın
