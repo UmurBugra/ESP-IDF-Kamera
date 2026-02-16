@@ -19,7 +19,23 @@ CONFIG_SPIRAM_USE_MALLOC=y
 # ESP-Hosted WiFi via ESP32-C6 co-processor (Waveshare ESP32-P4-WiFi6 board)
 # NOTE: ESP_HOST_WIFI_ENABLED must NOT be set - it disables esp_wifi_remote!
 CONFIG_SLAVE_IDF_TARGET_ESP32C6=y
-# SDIO is auto-selected as default transport for P4+C6 by esp_hosted
+# Explicitly select SDIO transport (P4+C6 via SDIO on Waveshare board)
+CONFIG_ESP_HOSTED_SDIO_HOST_INTERFACE=y
+
+# ---- Streaming Performance Tuning ----
+# Increase ISOC packets/URB: 4→32 gives 4ms buffering per URB (vs 0.5ms)
+# Tolerates SDIO/WiFi contention without missing USB microframes
+CONFIG_NUM_PACKETS_PER_URB=32
+
+# Increase TCP send buffer: 5760→32768 so httpd_resp_send_chunk can
+# queue an entire JPEG frame without waiting for ACKs per segment
+CONFIG_LWIP_TCP_SND_BUF_DEFAULT=32768
+
+# Increase TCP receive window to match
+CONFIG_LWIP_TCP_WND_DEFAULT=32768
+
+# Increase TCP recv mailbox for better throughput
+CONFIG_LWIP_TCP_RECVMBOX_SIZE=32
 
 # For IDF4.4
 CONFIG_ESP32S2_DEFAULT_CPU_FREQ_240=y

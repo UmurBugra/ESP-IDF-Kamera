@@ -173,6 +173,5 @@ $<TARGET_FILE:idf::espressif__esp_wifi_remote>
 $<TARGET_FILE:idf::usb_stream>
 $<TARGET_FILE:__idf_usb>
 $<TARGET_FILE:idf::main>
-$<TARGET_FILE:__idf_esp_driver_jpeg>
 $<TARGET_FILE:__idf_xfer_http>
 $<TARGET_FILE:__idf_usb_stream>

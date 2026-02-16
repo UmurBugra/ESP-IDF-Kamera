@@ -5,19 +5,19 @@ Bu proje, USB UVC kameradan alınan görüntüyü ESP32-P4 üzerinden Wi-Fi hots
 ### Ne Yapıyor?
 
 1. ESP32-C6 üzerinden Wi-Fi Access Point başlatır (esp_hosted, SDIO bağlantısı)
-2. USB kameradan YUYV (ham) görüntü alır (320×240, 10 FPS)
-3. Her kareyi yazılımsal olarak YUYV → BGR888'e çevirir (BT.601 renk formülleri)
-4. BGR888'i ESP32-P4'ün **donanımsal JPEG encoder'ı** ile sıkıştırır
-5. Sıkıştırılmış JPEG'i Wi-Fi üzerinden HTTP ile yayınlar
-6. Tarayıcıdan `http://192.168.4.1` adresine bağlanarak canlı görüntü izlenir
+2. USB kameradan **MJPEG** formatında sıkıştırılmış görüntü alır (640×480, 25 FPS)
+3. Kameradan gelen JPEG kareleri doğrudan Wi-Fi üzerinden HTTP ile yayınlar (yazılımsal dönüşüm yok!)
+4. Tarayıcıdan `http://192.168.4.1` adresine bağlanarak canlı görüntü izlenir
 
 ### Veri Akışı
 
 ```
-USB Kamera ──YUYV──→ ESP32-P4 CPU ──BGR888──→ HW JPEG Encoder ──JPEG──→ WiFi AP (C6) ──→ Tarayıcı
-             (ham)    (yazılım        (donanım                    (esp_hosted
-              veri)    dönüşüm)        sıkıştırma)                 SDIO)
+USB Kamera ──MJPEG──→ ESP32-P4 ──────────→ WiFi AP (C6) ──→ Tarayıcı
+             (JPEG)    (doğrudan aktarım)   (esp_hosted       (HTTP MJPEG
+                        CPU işlemi yok)      SDIO)              stream)
 ```
+
+> **Not**: Kamera MJPEG'i kendi içinde ürettiği için ESP32-P4 CPU'su neredeyse boşta kalır. Yazılımsal renk dönüşümü veya donanımsal JPEG sıkıştırma gerekmez.
 
 ## Donanım
 
@@ -39,9 +39,11 @@ USB Kamera ──YUYV──→ ESP32-P4 CPU ──BGR888──→ HW JPEG Encode
 | Slave Reset | 54 |
 
 ### USB Kamera
-- Uncompressed (YUYV) format destekleyen herhangi bir USB UVC kamera
+- **MJPEG format** destekleyen herhangi bir USB UVC kamera
 - ESP32-P4 USB Host portuna bağlanır (USB DWC HS, UTMI PHY)
-- Test edilen kamera: VID 0x1E4E, PID 0x0110 (sadece YUYV, MJPEG desteği yok)
+- Test edilen kamera: VID 0x0BDA, PID 0x5846 — "USB Camera"
+  - MJPEG: 1280×720, 800×600, 640×480, 640×360, 480×270, 352×288, 320×240, 160×120 (hepsi 25 FPS)
+  - YUYV: 1280×720 (10 FPS), 800×600 (15 FPS), 640×480 (30 FPS), 320×240 (30 FPS)
 
 ## Gereksinimler
 
@@ -84,10 +86,11 @@ CONFIG_PARTITION_TABLE_SINGLE_APP_LARGE=y # Büyük uygulama bölümü (~1MB bin
 |--------|-------|-------------|
 | `ENABLE_UVC_CAMERA_FUNCTION` | 1 | USB kamerayı etkinleştir |
 | `ENABLE_UVC_WIFI_XFER` | 1 | Görüntüyü WiFi üzerinden aktar |
+| `DEMO_UVC_MJPEG_MODE` | 1 | Kameradan doğrudan MJPEG al |
 | `ENABLE_UVC_FRAME_RESOLUTION_ANY` | 0 | Belirli çözünürlük kullan |
-| `DEMO_UVC_FRAME_WIDTH` | 320 | Kare genişliği |
-| `DEMO_UVC_FRAME_HEIGHT` | 240 | Kare yüksekliği |
-| FPS | 10 | Saniyedeki kare sayısı |
+| `DEMO_UVC_FRAME_WIDTH` | 640 | Kare genişliği |
+| `DEMO_UVC_FRAME_HEIGHT` | 480 | Kare yüksekliği |
+| FPS | 25 | Saniyedeki kare sayısı |
 
 ## Bağımlılıklar (managed components)
 
@@ -101,17 +104,16 @@ ESP32-P4'te yerleşik Wi-Fi yok ve USB DWC HS (UTMI PHY) kullanıyor. Bu nedenle
 
 1. **USB PHY**: ESP32-P4'ün HS kontrolcüsü için `USB_PHY_TARGET_UTMI` olarak değiştirildi
 2. **Cache hizalama**: USB DMA tamponları için 64 byte cache-line hizalaması eklendi
-3. **UVC Uncompressed format**: `VS_FORMAT_UNCOMPRESSED` / `VS_FRAME_UNCOMPRESSED` tanımlayıcı ayrıştırma eklendi (orijinal kod sadece MJPEG destekliyordu)
-4. **YUYV → JPEG dönüşüm hattı**: Kamera MJPEG desteklemediği için yazılımsal YUYV→BGR888 renk dönüşümü + donanımsal JPEG sıkıştırma eklendi
+3. **UVC Uncompressed format**: `VS_FORMAT_UNCOMPRESSED` / `VS_FRAME_UNCOMPRESSED` tanımlayıcı ayrıştırma eklendi
+4. **MJPEG doğrudan aktarım**: MJPEG destekleyen kameralarda yazılımsal dönüşüm gerekmez — kameradan gelen JPEG kareleri doğrudan HTTP'ye aktarılır
 5. **WiFi (esp_hosted)**: `esp_wifi_remote` + `esp_hosted` ile C6 üzerinden SDIO aracılığıyla WiFi sağlandı
-6. **PSRAM**: Büyük frame tamponları için etkinleştirildi (~154KB YUYV × 3 tampon + RGB + JPEG)
+6. **PSRAM**: USB transfer tamponları için etkinleştirildi (100KB × 3 tampon)
 
 ## Bilinen Kısıtlamalar
 
-- **Sadece YUYV**: Kamera MJPEG desteklemiyor; CPU yoğun renk dönüşümü gerekiyor
-- **Pratik maks çözünürlük 320×240**: 640×480 YUYV'de USB transfer taşması (buffer overflow) oluyor
+- **MJPEG kamera gerekli**: Kameranın MJPEG formatını desteklemesi gerekir
 - **esp_hosted sürüm uyumsuzluğu**: `Host [2.11.0] > Co-proc [0.0.0]` uyarısı — C6 slave firmware güncellenebilir
-- **Ekran parçalanması**: Düşük ışıkta kamera zorlandığında ara sıra görüntü bozulması olabiliyor
+- **WiFi bant genişliği**: Yüksek çözünürlüklerde (1280×720) WiFi bant genişliği darboğaz olabilir
 
 ## WiFi Bağlantısı
 
