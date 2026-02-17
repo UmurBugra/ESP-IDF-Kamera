@@ -160,4 +160,8 @@ void app_wifi_main()
         wifi_init_sta(wifi_sta_netif);
     }
     ESP_ERROR_CHECK(esp_wifi_start());
+
+    /* Disable WiFi power save for low-latency streaming */
+    ESP_ERROR_CHECK(esp_wifi_set_ps(WIFI_PS_NONE));
+    ESP_LOGI(TAG, "WiFi power save DISABLED (WIFI_PS_NONE)");
 }

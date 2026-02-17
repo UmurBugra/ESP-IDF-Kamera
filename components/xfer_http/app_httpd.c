@@ -132,7 +132,9 @@ static esp_err_t stream_handler(httpd_req_t *req)
     httpd_resp_set_hdr(req, "X-Framerate", "60");
 
     while (true) {
+        int64_t t0 = esp_timer_get_time();
         fb = esp_camera_fb_get();
+        int64_t t_fb = esp_timer_get_time();
 
         if (!fb) {
             ESP_LOGE(TAG, "Camera capture failed");
@@ -144,6 +146,7 @@ static esp_err_t stream_handler(httpd_req_t *req)
             _jpg_buf = fb->buf;
         }
 
+        int64_t t_send_start = esp_timer_get_time();
         if (res == ESP_OK) {
             res = httpd_resp_send_chunk(req, _STREAM_BOUNDARY, strlen(_STREAM_BOUNDARY));
         }
@@ -153,9 +156,11 @@ static esp_err_t stream_handler(httpd_req_t *req)
             res = httpd_resp_send_chunk(req, (const char *)part_buf, hlen);
         }
 
+        int64_t t_hdr = esp_timer_get_time();
         if (res == ESP_OK) {
             res = httpd_resp_send_chunk(req, (const char *)_jpg_buf, _jpg_buf_len);
         }
+        int64_t t_send_end = esp_timer_get_time();
 
         if (fb) {
             esp_camera_fb_return(fb);
@@ -174,11 +179,18 @@ static esp_err_t stream_handler(httpd_req_t *req)
         last_frame = fr_end;
         frame_time /= 1000;
         uint32_t avg_frame_time = ra_filter_run(&ra_filter, frame_time);
-        ESP_LOGI(TAG, "MJPG: %luB %lums (%.1ffps), AVG: %lums (%.1ffps)"
+
+        int32_t wait_ms = (int32_t)((t_fb - t0) / 1000);
+        int32_t hdr_ms  = (int32_t)((t_hdr - t_send_start) / 1000);
+        int32_t data_ms = (int32_t)((t_send_end - t_hdr) / 1000);
+        int32_t send_ms = (int32_t)((t_send_end - t_send_start) / 1000);
+
+        ESP_LOGI(TAG, "MJPG: %luB %lums (%.1ffps) AVG:%lums | wait=%ldms hdr=%ldms data=%ldms send=%ldms"
                  ,
                  (uint32_t)(_jpg_buf_len),
                  (uint32_t)frame_time, 1000.0 / (uint32_t)frame_time,
-                 avg_frame_time, 1000.0 / avg_frame_time
+                 avg_frame_time,
+                 (long)wait_ms, (long)hdr_ms, (long)data_ms, (long)send_ms
                 );
     }
 
