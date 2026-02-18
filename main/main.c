@@ -50,8 +50,8 @@ static EventGroupHandle_t s_evt_handle;
 #define DEMO_UVC_FRAME_WIDTH        FRAME_RESOLUTION_ANY
 #define DEMO_UVC_FRAME_HEIGHT       FRAME_RESOLUTION_ANY
 #else
-#define DEMO_UVC_FRAME_WIDTH        320
-#define DEMO_UVC_FRAME_HEIGHT       240
+#define DEMO_UVC_FRAME_WIDTH        640
+#define DEMO_UVC_FRAME_HEIGHT       480
 #endif
 
 #ifdef CONFIG_IDF_TARGET_ESP32S2
@@ -323,7 +323,7 @@ void app_main(void)
         /* match the any resolution of current camera (first frame size as default) */
         .frame_width = DEMO_UVC_FRAME_WIDTH,
         .frame_height = DEMO_UVC_FRAME_HEIGHT,
-        .frame_interval = FPS2INTERVAL(5),
+        .frame_interval = FPS2INTERVAL(25),
         .xfer_buffer_size = DEMO_UVC_XFER_BUFFER_SIZE,
         .xfer_buffer_a = xfer_buffer_a,
         .xfer_buffer_b = xfer_buffer_b,

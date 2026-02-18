@@ -1,4 +1,0 @@
-Command: ninja confserver
-fatal: not a git repository (or any of the parent directories): .git
-fatal: not a git repository (or any of the parent directories): .git
-fatal: not a git repository: C:/esp/v5.5.2/esp-idf/components/openthread/openthread/../../../.git/modules/components/openthread/openthread
