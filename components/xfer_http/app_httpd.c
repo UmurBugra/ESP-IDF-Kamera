@@ -9,6 +9,8 @@
 #include "esp_timer.h"
 #include "esp_camera.h"
 #include "sdkconfig.h"
+#include <sys/socket.h>
+#include <netinet/tcp.h>
 
 #if defined(ARDUINO_ARCH_ESP32) && defined(CONFIG_ARDUHAL_ESP_LOG)
 #include "esp32-hal-log.h"
@@ -131,6 +133,15 @@ static esp_err_t stream_handler(httpd_req_t *req)
     httpd_resp_set_hdr(req, "Access-Control-Allow-Origin", "*");
     httpd_resp_set_hdr(req, "X-Framerate", "60");
 
+    /* TCP_NODELAY: disable Nagle algorithm — send small chunks immediately */
+    int fd = httpd_req_to_sockfd(req);
+    if (fd >= 0) {
+        int nodelay = 1;
+        setsockopt(fd, IPPROTO_TCP, TCP_NODELAY, &nodelay, sizeof(nodelay));
+    }
+
+    uint32_t total_skipped = 0;
+
     while (true) {
         int64_t t0 = esp_timer_get_time();
         fb = esp_camera_fb_get();
@@ -185,13 +196,27 @@ static esp_err_t stream_handler(httpd_req_t *req)
         int32_t data_ms = (int32_t)((t_send_end - t_hdr) / 1000);
         int32_t send_ms = (int32_t)((t_send_end - t_send_start) / 1000);
 
-        ESP_LOGI(TAG, "MJPG: %luB %lums (%.1ffps) AVG:%lums | wait=%ldms hdr=%ldms data=%ldms send=%ldms"
-                 ,
-                 (uint32_t)(_jpg_buf_len),
-                 (uint32_t)frame_time, 1000.0 / (uint32_t)frame_time,
-                 avg_frame_time,
-                 (long)wait_ms, (long)hdr_ms, (long)data_ms, (long)send_ms
-                );
+        /* Frame skip: if send took >100ms, stale frames piled up in the
+         * counting semaphore. esp_camera_fb_get() will drain them on the
+         * next call, so we only need to track the count here for logging. */
+        if (send_ms > 100) {
+            total_skipped += (uint32_t)(send_ms / 40);  /* ~40ms per frame at 25fps */
+            ESP_LOGW(TAG, "SPIKE: %luB %lums (%.1ffps) AVG:%lums | send=%ldms skipped~%lu total_skip=%lu"
+                     , (uint32_t)_jpg_buf_len
+                     , (uint32_t)frame_time, 1000.0 / (uint32_t)frame_time
+                     , avg_frame_time
+                     , (long)send_ms
+                     , (unsigned long)(send_ms / 40)
+                     , (unsigned long)total_skipped);
+        } else {
+            ESP_LOGI(TAG, "MJPG: %luB %lums (%.1ffps) AVG:%lums | wait=%ldms hdr=%ldms data=%ldms send=%ldms"
+                     ,
+                     (uint32_t)(_jpg_buf_len),
+                     (uint32_t)frame_time, 1000.0 / (uint32_t)frame_time,
+                     avg_frame_time,
+                     (long)wait_ms, (long)hdr_ms, (long)data_ms, (long)send_ms
+                    );
+        }
     }
 
     last_frame = 0;
@@ -246,7 +271,9 @@ void app_httpd_main()
 
     config.server_port += 1;
     config.ctrl_port += 1;
-    ESP_LOGI(TAG, "Starting stream server on port: '%d'", config.server_port);
+    config.send_wait_timeout = 2;  /* Cap TCP stall at 2s (default 5s) */
+    config.recv_wait_timeout = 2;
+    ESP_LOGI(TAG, "Starting stream server on port: '%d' (send_timeout=%ds)", config.server_port, config.send_wait_timeout);
 
     if (httpd_start(&stream_httpd, &config) == ESP_OK) {
         httpd_register_uri_handler(stream_httpd, &stream_uri);

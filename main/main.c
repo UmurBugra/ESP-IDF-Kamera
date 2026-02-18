@@ -102,6 +102,17 @@ camera_fb_t *esp_camera_fb_get()
     static camera_fb_t fb;
     xSemaphoreTake(s_frame_sem, portMAX_DELAY);
 
+    /* Drain stale signals: during a TCP stall, USB keeps producing frames
+     * and each gives the semaphore.  Draining ensures we always swap to
+     * the absolute latest frame rather than replaying old ones. */
+    uint32_t drained = 0;
+    while (xSemaphoreTake(s_frame_sem, 0) == pdTRUE) {
+        drained++;
+    }
+    if (drained > 0) {
+        ESP_LOGW("cam_fb", "Skipped %lu stale frame(s)", (unsigned long)drained);
+    }
+
     /* Swap latest ↔ http: HTTP takes the most recent complete frame */
     portENTER_CRITICAL(&s_fb_mux);
     int tmp      = s_idx_http;
@@ -316,7 +327,10 @@ void app_main(void)
         s_fb_bufs[i] = (uint8_t *)heap_caps_malloc(DEMO_UVC_XFER_BUFFER_SIZE, MALLOC_CAP_SPIRAM);
         assert(s_fb_bufs[i] != NULL);
     }
-    s_frame_sem = xSemaphoreCreateBinary();
+    /* Counting semaphore (max 30): during TCP stalls, USB callback keeps
+     * giving signals. With binary semaphore these collapse silently.
+     * Counting lets esp_camera_fb_get() drain them → skip stale frames. */
+    s_frame_sem = xSemaphoreCreateCounting(30, 0);
     assert(s_frame_sem != NULL);
 
     uvc_config_t uvc_config = {

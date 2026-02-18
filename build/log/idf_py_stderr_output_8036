@@ -1,0 +1,4 @@
+Command: cmake -G Ninja -DPYTHON_DEPS_CHECKED=1 -DPYTHON=C:\Espressif\tools\python\v5.5.2\venv\Scripts\python.exe -DESP_PLATFORM=1 -DSDKCONFIG='d:\dev\ESP-IDF\esp-iot-solution\examples\usb\host\usb_camera_mic_spk\sdkconfig' -DCCACHE_ENABLE=0 D:\dev\ESP-IDF\esp-iot-solution\examples\usb\host\usb_camera_mic_spk
+fatal: not a git repository (or any of the parent directories): .git
+fatal: not a git repository (or any of the parent directories): .git
+fatal: not a git repository: C:/esp/v5.5.2/esp-idf/components/openthread/openthread/../../../.git/modules/components/openthread/openthread
